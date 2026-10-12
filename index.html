@@ -54,10 +54,6 @@ h1{font-size:clamp(2.6rem,5.6vw,4.7rem);line-height:1.02;letter-spacing:-.035em;
 .lead{margin:28px 0 36px;font-size:1.18rem;color:var(--mute);max-width:560px}
 .lead b{color:var(--ice);font-weight:500}
 .cta{display:flex;gap:14px;flex-wrap:wrap}
-.install{margin-top:34px;display:inline-flex;align-items:center;gap:14px;padding:11px 12px 11px 18px;border:1px solid var(--line);border-radius:12px;background:rgba(8,10,16,.8);font-size:.9rem}
-.install span{color:var(--cyan)}
-.install button{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--mute);border-radius:8px;padding:5px 12px;cursor:pointer;font:inherit;font-size:.78rem;transition:.2s}
-.install button:hover{color:var(--ice);border-color:var(--cyan)}
 
 /* hero demo */
 .demo{position:relative}
@@ -180,7 +176,6 @@ details p{margin-top:12px;color:var(--mute);max-width:620px;font-size:.98rem}
 .final>*{position:relative}
 .final h2{margin:0 auto 20px;max-width:760px;font-size:clamp(2.2rem,5vw,3.8rem)}
 .final p{color:var(--mute);margin:0 auto 38px;max-width:520px;font-size:1.1rem}
-.final .install{margin:0 0 28px}
 footer{padding:44px 0 56px;color:var(--dim);font-size:.82rem}
 footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
 
@@ -195,7 +190,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
   nav ul{display:none}
   .hero{padding-top:60px}section{padding:80px 0}
 }
-@media(max-width:560px){.fails{grid-template-columns:1fr}.verdict{grid-template-columns:1fr}.sim{padding:24px}.install{font-size:.78rem}}
+@media(max-width:560px){.fails{grid-template-columns:1fr}.verdict{grid-template-columns:1fr}.sim{padding:24px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
 </style>
 </head>
@@ -213,7 +208,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
       <li><a href="#como">Como funciona</a></li>
       <li><a href="#faq">Perguntas</a></li>
     </ul>
-    <a href="#comecar" class="btn sm">Começar</a>
+    <a href="#comecar" class="btn sm">Acesso antecipado</a>
   </div>
 </nav>
 
@@ -225,10 +220,9 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
       <h1>Lembrar não deveria custar <em class="s">reler tudo.</em></h1>
       <p class="lead">O Memairy mantém uma <b>marca d'água viva</b> do seu ambiente e deixa o agente se acoplar a ela. Quando ele abre a boca, o contexto já está lá: nada de reenviar a conversa, nada de ler um arquivo de notas.</p>
       <div class="cta">
-        <a href="#comecar" class="btn">Acoplar ao meu agente <span>→</span></a>
+        <a href="#comecar" class="btn">Entrar na lista de espera <span>→</span></a>
         <a href="#ideia" class="btn ghost">Ver a ideia</a>
       </div>
-      <div class="install mono"><code><span>$</span> npm i memairy</code><button>copiar</button></div>
     </div>
 
     <div class="demo">
@@ -374,9 +368,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
     </div>
 
     <div class="steps">
-      <div class="card step"><div class="num">PASSO 01</div><h3>Instale</h3><p>Um pacote, sem infraestrutura de memória para montar.</p>
-<pre><span class="c"># no seu projeto</span>
-<span class="k">npm</span> i memairy</pre></div>
+      <div class="card step"><div class="num">PASSO 01</div><h3>Conecte</h3><p>Sem infraestrutura de memória para montar. O Memairy cuida do estado do ambiente.</p></div>
       <div class="card step"><div class="num">PASSO 02</div><h3>Acople</h3><p>Envolva o agente que você já tem. Nenhuma reescrita.</p>
 <pre><span class="k">import</span> { <span class="f">attach</span> } <span class="k">from</span> <span class="s">"memairy"</span>
 
@@ -400,7 +392,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
         <details open><summary>Isso é só um RAG com outro nome?</summary><p>Não. RAG é uma etapa de busca: o agente recebe uma pergunta, procura trechos e os cola no prompt. No Memairy não há busca no meio do caminho, porque o contexto do ambiente já está acoplado ao agente.</p></details>
         <details><summary>Funciona com qualquer modelo?</summary><p>A proposta é ser agnóstico. O Memairy fica entre o ambiente e o agente, e por isso você pode acoplá-lo a Claude, GPT ou ao agente que já construiu.</p></details>
         <details><summary>E quando algo deixa de ser verdade?</summary><p>Como a marca d'água acompanha o ambiente em tempo real, ela muda junto com ele. O que ficou obsoleto perde peso por conta própria, sem você escrever regras de expiração.</p></details>
-        <details><summary>Preciso reescrever o meu agente?</summary><p>Não. O acoplamento envolve o agente existente. Instalar e acoplar são dois passos; o resto é o dia a dia de sempre.</p></details>
+        <details><summary>Preciso reescrever o meu agente?</summary><p>Não. O acoplamento envolve o agente existente. Conectar e acoplar são dois passos; o resto é o dia a dia de sempre.</p></details>
       </div>
     </div>
   </div>
@@ -410,11 +402,10 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
 <section id="comecar" style="padding-top:40px">
   <div class="wrap reveal">
     <div class="final">
-      <div class="eyebrow mono" style="justify-content:center">comece agora</div>
+      <div class="eyebrow mono" style="justify-content:center">acesso antecipado</div>
       <h2>Pare de lembrar o agente. <em class="s">Deixe ele lembrar.</em></h2>
-      <p>Instale, acople e converse. A memória passa a ser parte do agente, e não mais uma tarefa sua.</p>
-      <div class="install mono"><code><span>$</span> npm i memairy</code><button>copiar</button></div><br>
-      <a href="#" class="btn">Instalar o Memairy <span>→</span></a>
+      <p>O Memairy está em desenvolvimento. Entre na lista de espera e seja avisado quando abrirmos o acesso antecipado.</p>
+      <a href="mailto:contato@memairy.com?subject=Lista%20de%20espera%20Memairy" class="btn">Entrar na lista de espera <span>→</span></a>
     </div>
   </div>
 </section>
@@ -424,13 +415,6 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
 </footer>
 
 <script>
-// copy buttons
-document.querySelectorAll('.install button').forEach(b=>b.addEventListener('click',()=>{
-  const t=b.parentElement.querySelector('code').textContent.replace(/^\$\s*/,'');
-  try{navigator.clipboard.writeText(t)}catch(e){}
-  b.textContent='copiado';setTimeout(()=>b.textContent='copiar',1500);
-}));
-
 // reveal on scroll
 const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.08});
 document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
