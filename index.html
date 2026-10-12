@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memairy — memória real para agentes de IA</title>
+<meta name="description" content="Memairy é uma camada de memória que acompanha o seu ambiente em tempo real. O agente se acopla a ela e passa a lembrar, sem reler histórico nem consultar arquivos.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#030408; --bg2:#07080f; --panel:#0a0c14; --line:#1a1f30;
+  --blue:#3b82f6; --cyan:#38bdf8; --ice:#eef2fb; --indigo:#6366f1;
+  --text:#dfe4f0; --mute:#8b94ab; --dim:#535c75;
+  --sans:'Space Grotesk',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+.mono{font-family:var(--mono)}
+em.s{font-style:normal;font-weight:inherit;background:linear-gradient(95deg,#fff 10%,#7fb0ff 90%);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* ---------- atmosphere ---------- */
+body{background:var(--bg)}
+#field{position:fixed;inset:0;z-index:-1;width:100%;height:100%;pointer-events:none}
+.grain{position:fixed;inset:-50%;z-index:50;pointer-events:none;opacity:.07;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+
+/* ---------- nav ---------- */
+nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(16px) saturate(140%);background:rgba(3,4,8,.6);border-bottom:1px solid rgba(255,255,255,.06)}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;height:66px}
+.logo{display:flex;align-items:center;gap:11px;font-weight:600;letter-spacing:.14em;font-size:.95rem}
+.logo i{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--cyan);position:relative;box-shadow:0 0 18px rgba(56,189,248,.35)}
+.logo i::before{content:"";position:absolute;inset:-6px;border-radius:50%;border:1px solid rgba(56,189,248,.25)}
+.logo i::after{content:"";position:absolute;inset:5px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--blue))}
+nav ul{display:flex;gap:30px;list-style:none;color:var(--mute);font-size:.93rem}
+nav ul a{transition:color .2s}nav ul a:hover{color:var(--ice)}
+.btn{position:relative;display:inline-flex;align-items:center;gap:10px;padding:14px 26px;border-radius:12px;font-weight:500;color:#fff;border:1px solid rgba(140,185,255,.45);background:#2563eb;box-shadow:0 10px 36px -12px rgba(59,130,246,.7),inset 0 1px 0 rgba(255,255,255,.22);transition:transform .25s,box-shadow .25s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 14px 44px -8px rgba(59,130,246,.85),inset 0 1px 0 rgba(255,255,255,.3)}
+.btn.ghost{background:rgba(255,255,255,.03);border-color:var(--line);color:var(--ice);box-shadow:none}
+.btn.ghost:hover{border-color:var(--cyan);box-shadow:0 0 30px -8px rgba(56,189,248,.5)}
+.btn.sm{padding:9px 18px;font-size:.88rem;border-radius:10px}
+
+/* ---------- hero ---------- */
+.hero{padding:96px 0 70px}
+.hero .wrap{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center}
+.badge{display:inline-flex;align-items:center;gap:10px;padding:7px 15px 7px 11px;border:1px solid var(--line);border-radius:99px;font-size:.78rem;color:var(--ice);background:rgba(255,255,255,.03);margin-bottom:30px}
+.badge b{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 12px var(--cyan);animation:blink 2.4s ease-in-out infinite}
+@keyframes blink{50%{opacity:.3}}
+h1{font-size:clamp(2.6rem,5.6vw,4.7rem);line-height:1.02;letter-spacing:-.035em;font-weight:600;color:#f1f7ff}
+.lead{margin:28px 0 36px;font-size:1.18rem;color:var(--mute);max-width:560px}
+.lead b{color:var(--ice);font-weight:500}
+.cta{display:flex;gap:14px;flex-wrap:wrap}
+.install{margin-top:34px;display:inline-flex;align-items:center;gap:14px;padding:11px 12px 11px 18px;border:1px solid var(--line);border-radius:12px;background:rgba(8,10,16,.8);font-size:.9rem}
+.install span{color:var(--cyan)}
+.install button{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--mute);border-radius:8px;padding:5px 12px;cursor:pointer;font:inherit;font-size:.78rem;transition:.2s}
+.install button:hover{color:var(--ice);border-color:var(--cyan)}
+
+/* hero demo */
+.demo{position:relative}
+.win{border-radius:18px;border:1px solid transparent;background:linear-gradient(#080a12,#080a12) padding-box,linear-gradient(160deg,rgba(255,255,255,.28),rgba(255,255,255,.05) 40%,rgba(90,140,255,.35)) border-box;box-shadow:0 40px 80px -30px rgba(0,0,0,.9);overflow:hidden}
+.win-h{display:flex;align-items:center;gap:7px;padding:13px 16px;border-bottom:1px solid var(--line);font-size:.72rem;color:var(--dim)}
+.win-h i{width:9px;height:9px;border-radius:50%;background:#222839}
+.win-h span{margin-left:auto}
+.sess{padding:18px 18px 4px}
+.sess+.sess{border-top:1px dashed var(--line)}
+.when{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan);margin-bottom:12px;display:flex;justify-content:space-between}
+.when em{font-style:normal;color:var(--dim)}
+.msg{max-width:88%;padding:10px 14px;border-radius:14px;font-size:.9rem;margin-bottom:11px;line-height:1.5}
+.msg.u{background:rgba(59,130,246,.14);border:1px solid rgba(59,130,246,.3);margin-left:auto;border-bottom-right-radius:4px}
+.msg.a{background:rgba(255,255,255,.04);border:1px solid var(--line);border-bottom-left-radius:4px}
+.msg mark{background:rgba(56,189,248,.16);color:#9ee0ff;padding:0 4px;border-radius:4px;box-shadow:0 0 14px rgba(56,189,248,.25)}
+.gap{text-align:center;color:var(--dim);font-size:.72rem;padding:10px 0;position:relative}
+.gap::before,.gap::after{content:"";position:absolute;top:50%;width:30%;height:1px;background:linear-gradient(90deg,transparent,var(--line))}
+.gap::before{left:6%}.gap::after{right:6%;transform:scaleX(-1)}
+.stat{display:flex;gap:10px;padding:13px 18px;border-top:1px solid var(--line);background:rgba(0,0,0,.35);font-size:.72rem;color:var(--mute);justify-content:space-between;flex-wrap:wrap}
+.stat b{color:var(--cyan);font-weight:500}
+.demo small{display:block;text-align:center;margin-top:14px;font-size:.72rem;color:var(--dim)}
+
+/* ---------- shared blocks ---------- */
+section{padding:110px 0;position:relative}
+.eyebrow{display:flex;align-items:center;gap:12px;color:var(--cyan);font-size:.76rem;letter-spacing:.22em;text-transform:uppercase;margin-bottom:20px}
+.eyebrow::after{content:"";height:1px;width:56px;background:linear-gradient(90deg,var(--cyan),transparent)}
+h2{font-size:clamp(2rem,4.2vw,3.3rem);letter-spacing:-.03em;line-height:1.06;margin-bottom:22px;font-weight:600;color:#f1f7ff;max-width:820px}
+.sub{color:var(--mute);max-width:680px;font-size:1.1rem}
+
+/* spotlight cards */
+.card{--mx:50%;--my:0%;position:relative;padding:28px;border-radius:18px;border:1px solid transparent;background:linear-gradient(rgba(9,11,18,.82),rgba(7,8,14,.82)) padding-box,linear-gradient(160deg,rgba(255,255,255,.16),rgba(255,255,255,.04) 50%,rgba(255,255,255,.08)) border-box;backdrop-filter:blur(8px);overflow:hidden;transition:transform .35s,box-shadow .35s}
+.card::before{content:"";position:absolute;inset:0;background:radial-gradient(320px circle at var(--mx) var(--my),rgba(70,130,255,.2),transparent 60%);opacity:0;transition:opacity .3s;pointer-events:none}
+.card:hover{transform:translateY(-4px);box-shadow:0 20px 50px -24px rgba(59,130,246,.45)}
+.card:hover::before{opacity:1}
+.card h3{font-size:1.14rem;margin:14px 0 8px;color:var(--ice);font-weight:600;letter-spacing:-.01em;position:relative}
+.card p{color:var(--mute);font-size:.95rem;position:relative}
+.ico{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--cyan);position:relative}
+.ico svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- problem ---------- */
+.fails{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:52px}
+.fails .card .tagl{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-top:2px;position:relative}
+.fails .card .ico{color:#8b94ab}
+.verdict{margin-top:44px;padding:30px 34px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.025);backdrop-filter:blur(8px);display:grid;grid-template-columns:auto 1fr;gap:26px;align-items:center}
+.verdict .q{font-size:4rem;line-height:.8;color:var(--blue);opacity:.8;font-weight:700}
+.verdict p{font-size:1.25rem;color:var(--ice);line-height:1.45}
+.verdict p span{color:var(--mute)}
+
+/* ---------- insight ---------- */
+.insight{display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center;margin-top:20px}
+.principles{margin-top:36px;display:flex;flex-direction:column;gap:6px}
+.pr{display:grid;grid-template-columns:44px 1fr;gap:16px;padding:18px 0;border-top:1px solid var(--line)}
+.pr:last-child{border-bottom:1px solid var(--line)}
+.pr .n{font-family:var(--mono);font-size:.8rem;color:var(--blue);padding-top:3px}
+.pr h3{font-size:1.1rem;color:var(--ice);font-weight:600;margin-bottom:4px}
+.pr h3 s{text-decoration-color:var(--dim);color:var(--dim);font-weight:400;text-decoration-thickness:1px}
+.pr p{color:var(--mute);font-size:.94rem}
+.orb{position:relative;aspect-ratio:1;width:100%;max-width:500px;margin:auto}
+.orb svg{width:100%;height:100%;overflow:visible}
+.rg{fill:none;stroke:#3b82f6;transform-origin:250px 250px}
+.o1{animation:spin 70s linear infinite}.o2{animation:spin 44s linear infinite reverse}.o3{animation:spin 90s linear infinite}.o4{animation:spin 30s linear infinite reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+.core{transform-origin:250px 250px;animation:breathe 4s ease-in-out infinite}
+@keyframes breathe{50%{transform:scale(1.14)}}
+.orb text{font-family:var(--mono);font-size:10.5px;fill:#6f86bd;letter-spacing:.06em}
+.orb .lbl{fill:#bfe0ff}
+
+/* ---------- cost simulator ---------- */
+.sim{margin-top:50px;border-radius:22px;border:1px solid transparent;background:linear-gradient(rgba(8,10,16,.88),rgba(6,7,12,.88)) padding-box,linear-gradient(160deg,rgba(255,255,255,.2),rgba(255,255,255,.04) 45%,rgba(90,140,255,.3)) border-box;backdrop-filter:blur(10px);padding:38px;display:grid;grid-template-columns:.9fr 1.1fr;gap:50px;align-items:center;box-shadow:0 40px 100px -50px rgba(0,0,0,.9)}
+.sim h3{font-size:1.5rem;letter-spacing:-.02em;color:#f1f7ff;margin-bottom:10px;font-weight:600}
+.sim p{color:var(--mute);font-size:.97rem}
+.range{margin-top:30px}
+.range label{display:flex;justify-content:space-between;font-size:.8rem;color:var(--mute);margin-bottom:12px}
+.range label b{color:var(--cyan);font-weight:500;font-size:1.05rem}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:99px;background:linear-gradient(90deg,var(--blue) var(--p,20%),#1a1f30 var(--p,20%));outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#e8f3ff;border:4px solid var(--blue);box-shadow:0 0 20px rgba(59,130,246,.9);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#e8f3ff;border:4px solid var(--blue);box-shadow:0 0 20px rgba(59,130,246,.9);cursor:pointer}
+.bars{display:flex;flex-direction:column;gap:22px}
+.bar .top{display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:9px;color:var(--mute)}
+.bar .top b{font-family:var(--mono);font-weight:500;color:var(--ice)}
+.track{height:38px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid var(--line);overflow:hidden;position:relative}
+.fill{height:100%;border-radius:9px;transition:width .5s cubic-bezier(.2,.8,.2,1);min-width:3px}
+.fill.old{background:repeating-linear-gradient(135deg,#222838 0 8px,#2a3144 8px 16px)}
+.fill.new{background:linear-gradient(90deg,#2563eb,#38bdf8);box-shadow:0 0 24px rgba(56,189,248,.6)}
+.mult{margin-top:6px;font-size:3.4rem;font-weight:600;letter-spacing:-.03em;line-height:1;color:#fff}
+.mult small{font-family:var(--sans);font-size:.85rem;color:var(--mute);margin-left:10px}
+.note{margin-top:14px;font-size:.74rem;color:var(--dim)}
+
+/* ---------- how ---------- */
+.pipe{display:grid;grid-template-columns:1fr 70px 1fr 70px 1fr;align-items:center;margin:54px 0 20px}
+.node{padding:24px 20px;border-radius:16px;border:1px solid var(--line);background:rgba(9,11,18,.85);text-align:center}
+.node.mid{border-color:rgba(56,189,248,.55);box-shadow:0 0 50px -14px rgba(56,189,248,.5)}
+.node small{display:block;font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+.node b{display:block;font-size:1.1rem;color:var(--ice);font-weight:600}
+.node span{display:block;margin-top:6px;font-size:.82rem;color:var(--mute)}
+.wire{height:2px;position:relative;background:linear-gradient(90deg,transparent,rgba(59,130,246,.5),transparent);overflow:hidden}
+.wire::after{content:"";position:absolute;top:-1px;left:-30%;width:30%;height:4px;border-radius:4px;background:linear-gradient(90deg,transparent,#7dd3fc,transparent);animation:flow 2.2s linear infinite}
+.wire.b::after{animation-direction:reverse}
+@keyframes flow{to{left:100%}}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:40px}
+.step .num{font-family:var(--mono);font-size:.78rem;color:var(--blue);letter-spacing:.1em;position:relative}
+.step h3{margin-top:8px}
+.step pre{margin-top:18px;position:relative}
+pre{padding:16px;border-radius:12px;background:#04050a;border:1px solid var(--line);color:var(--ice);font-family:var(--mono);font-size:.8rem;overflow-x:auto;line-height:1.75}
+pre .c{color:#46598c}pre .k{color:#38bdf8}pre .s{color:#93b8ff}pre .f{color:#a5b4fc}
+
+/* ---------- faq ---------- */
+.faq{display:grid;grid-template-columns:.8fr 1.2fr;gap:70px}
+details{border-top:1px solid var(--line);padding:22px 0}
+details:last-child{border-bottom:1px solid var(--line)}
+summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:20px;font-size:1.1rem;color:var(--ice);font-weight:500}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-family:var(--mono);color:var(--cyan);transition:transform .3s}
+details[open] summary::after{transform:rotate(45deg)}
+details p{margin-top:12px;color:var(--mute);max-width:620px;font-size:.98rem}
+
+/* ---------- final ---------- */
+.final{position:relative;text-align:center;padding:110px 24px;border-radius:30px;border:1px solid transparent;overflow:hidden;background:linear-gradient(rgba(7,8,14,.85),rgba(7,8,14,.85)) padding-box,linear-gradient(160deg,rgba(255,255,255,.25),rgba(255,255,255,.04) 45%,rgba(90,140,255,.4)) border-box;backdrop-filter:blur(10px)}
+.final::before{content:"";position:absolute;left:50%;top:-40%;width:700px;height:420px;transform:translateX(-50%);background:radial-gradient(closest-side,rgba(59,130,246,.22),transparent)}
+.final>*{position:relative}
+.final h2{margin:0 auto 20px;max-width:760px;font-size:clamp(2.2rem,5vw,3.8rem)}
+.final p{color:var(--mute);margin:0 auto 38px;max-width:520px;font-size:1.1rem}
+.final .install{margin:0 0 28px}
+footer{padding:44px 0 56px;color:var(--dim);font-size:.82rem}
+footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .9s cubic-bezier(.2,.7,.2,1),transform .9s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+
+@media(max-width:980px){
+  .hero .wrap,.insight,.sim,.faq{grid-template-columns:1fr;gap:44px}
+  .fails{grid-template-columns:1fr 1fr}
+  .steps{grid-template-columns:1fr}
+  .pipe{grid-template-columns:1fr;gap:6px}.wire{width:2px;height:34px;margin:auto}.wire::after{display:none}
+  nav ul{display:none}
+  .hero{padding-top:60px}section{padding:80px 0}
+}
+@media(max-width:560px){.fails{grid-template-columns:1fr}.verdict{grid-template-columns:1fr}.sim{padding:24px}.install{font-size:.78rem}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<canvas id="field" aria-hidden="true"></canvas>
+<div class="grain" aria-hidden="true"></div>
+
+<nav>
+  <div class="wrap">
+    <a href="#" class="logo">MEMAIRY<i style="order:-1"></i></a>
+    <ul>
+      <li><a href="#problema">Por que falha</a></li>
+      <li><a href="#ideia">A ideia</a></li>
+      <li><a href="#custo">Custo</a></li>
+      <li><a href="#como">Como funciona</a></li>
+      <li><a href="#faq">Perguntas</a></li>
+    </ul>
+    <a href="#comecar" class="btn sm">Começar</a>
+  </div>
+</nav>
+
+<!-- ================= HERO ================= -->
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <span class="badge mono"><b></b>harness de memória para agentes</span>
+      <h1>Lembrar não deveria custar <em class="s">reler tudo.</em></h1>
+      <p class="lead">O Memairy mantém uma <b>marca d'água viva</b> do seu ambiente e deixa o agente se acoplar a ela. Quando ele abre a boca, o contexto já está lá: nada de reenviar a conversa, nada de ler um arquivo de notas.</p>
+      <div class="cta">
+        <a href="#comecar" class="btn">Acoplar ao meu agente <span>→</span></a>
+        <a href="#ideia" class="btn ghost">Ver a ideia</a>
+      </div>
+      <div class="install mono"><code><span>$</span> npm i memairy</code><button>copiar</button></div>
+    </div>
+
+    <div class="demo">
+      <div class="win">
+        <div class="win-h mono"><i></i><i></i><i></i><span>agente · memairy acoplado</span></div>
+        <div class="sess">
+          <div class="when mono">Dia 1 <em>terça, 14:02</em></div>
+          <div class="msg u">Pra migrations eu prefiro Drizzle. Odeio SQL cru solto no repo.</div>
+          <div class="msg a">Anotado. Daqui pra frente, Drizzle.</div>
+        </div>
+        <div class="gap mono">12 dias, 3 projetos e 400 mensagens depois</div>
+        <div class="sess" style="border-top:0;padding-top:0">
+          <div class="when mono">Dia 13 <em>sábado, 09:41</em></div>
+          <div class="msg u">Cria a tabela de pagamentos.</div>
+          <div class="msg a">Feito em <mark>Drizzle</mark>, como você prefere. Segui o mesmo padrão de ids do módulo de <mark>usuários</mark>.</div>
+        </div>
+        <div class="stat mono"><span>histórico reenviado: <b>0 tokens</b></span><span>notas relidas: <b>0</b></span></div>
+      </div>
+      <small class="mono">exemplo ilustrativo de comportamento</small>
+    </div>
+  </div>
+</header>
+
+<!-- ================= PROBLEMA ================= -->
+<section id="problema">
+  <div class="wrap reveal">
+    <div class="eyebrow mono">01 · por que tudo isso falha</div>
+    <h2>Quatro jeitos de dar memória a uma IA. <em class="s">Nenhum</em> é memória.</h2>
+    <p class="sub">Cada abordagem resolve um sintoma e herda uma dor própria. O problema é o que elas têm em comum.</p>
+
+    <div class="fails">
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg></div>
+        <h3>Arquivos .md</h3>
+        <div class="tagl mono">o caderno</div>
+        <p>Cresce sem parar e é relido inteiro a cada turno. Alguém precisa decidir o que entra, e esse alguém erra.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="2"/><circle cx="17" cy="6" r="2"/><circle cx="12" cy="17" r="2"/><circle cx="19" cy="15" r="1.5"/><path d="M8 7h7M7 9l4 6M14 16l3.6-.8"/></svg></div>
+        <h3>Banco vetorial</h3>
+        <div class="tagl mono">o arquivo morto</div>
+        <p>Encontra o que é parecido, não o que é importante. Lembra de um detalhe solto e perde o fio da história.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></div>
+        <h3>Sonhar e resumir</h3>
+        <div class="tagl mono">a compressão</div>
+        <p>Condensa o passado em tópicos. Cada passada joga fora algo, e ninguém sabe o quê até fazer falta.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M8 5v14"/></svg></div>
+        <h3>Contexto gigante</h3>
+        <div class="tagl mono">a força bruta</div>
+        <p>Joga tudo na janela e torce. Caro, lento, e o modelo ainda se perde no meio do texto.</p>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <div class="q">“</div>
+      <p>O que guardar? Quando esquecer? Quanto é demais? <span>Essas perguntas não têm resposta porque todo método trata memória como um lugar aonde o agente vai buscar algo. E memória nunca foi isso.</span></p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= IDEIA ================= -->
+<section id="ideia">
+  <div class="wrap reveal">
+    <div class="eyebrow mono">02 · a ideia</div>
+    <div class="insight">
+      <div>
+        <h2>Você não consulta suas lembranças para <em class="s">andar de bicicleta.</em></h2>
+        <p class="sub">Memória humana não é um documento. É o estado do próprio cérebro, e ela molda cada ação antes de você pensar nela. O Memairy aplica o mesmo princípio ao agente.</p>
+        <div class="principles">
+          <div class="pr"><div class="n">I</div><div><h3>Estado, <s>não arquivo</s></h3><p>A memória é a condição em que o agente já chega, não um texto que ele precisa abrir antes de responder.</p></div></div>
+          <div class="pr"><div class="n">II</div><div><h3>Acoplamento, <s>não consulta</s></h3><p>O modelo se encaixa na marca d'água do ambiente. Não há etapa de busca entre a pergunta e a resposta.</p></div></div>
+          <div class="pr"><div class="n">III</div><div><h3>Esquecimento que acontece, <s>não que se configura</s></h3><p>O que deixa de importar se dissolve sozinho. Você não escreve política de retenção.</p></div></div>
+        </div>
+      </div>
+
+      <div class="orb">
+        <svg viewBox="0 0 500 500" role="img" aria-label="Agente acoplado à marca d'água do ambiente">
+          <defs>
+            <radialGradient id="cg"><stop offset="0" stop-color="#e0f2fe"/><stop offset=".25" stop-color="#38bdf8"/><stop offset=".65" stop-color="#2563eb" stop-opacity=".5"/><stop offset="1" stop-color="#2563eb" stop-opacity="0"/></radialGradient>
+            <linearGradient id="lg" x1="0" x2="1"><stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#6366f1"/></linearGradient>
+          </defs>
+          <circle class="rg o1" cx="250" cy="250" r="225" stroke-opacity=".25" stroke-dasharray="2 9"/>
+          <circle class="rg o2" cx="250" cy="250" r="185" stroke-opacity=".35" stroke-dasharray="14 7 2 7"/>
+          <circle class="rg o3" cx="250" cy="250" r="142" stroke-opacity=".45"/>
+          <circle class="rg o4" cx="250" cy="250" r="100" stroke="url(#lg)" stroke-opacity=".9" stroke-dasharray="40 14"/>
+          <circle class="core" cx="250" cy="250" r="86" fill="url(#cg)"/>
+          <circle cx="250" cy="250" r="9" fill="#f0f9ff"/>
+          <g class="o3" style="transform-origin:250px 250px"><circle cx="475" cy="250" r="5" fill="#38bdf8"/><circle cx="110" cy="132" r="4" fill="#818cf8"/></g>
+          <g class="o2" style="transform-origin:250px 250px"><circle cx="65" cy="250" r="6" fill="#6366f1"/><circle cx="360" cy="87" r="4" fill="#38bdf8"/></g>
+          <g class="o1" style="transform-origin:250px 250px"><circle cx="250" cy="25" r="4" fill="#3b82f6"/><circle cx="410" cy="410" r="5" fill="#7dd3fc"/></g>
+          <line x1="250" y1="250" x2="250" y2="64" stroke="#38bdf8" stroke-opacity=".4" stroke-dasharray="3 5"/>
+          <text class="lbl" x="250" y="52" text-anchor="middle">AGENTE</text>
+          <text x="250" y="492" text-anchor="middle">marca d'água do ambiente</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CUSTO ================= -->
+<section id="custo">
+  <div class="wrap reveal">
+    <div class="eyebrow mono">03 · a conta</div>
+    <h2>Reler o passado a cada turno <em class="s">custa mais a cada turno.</em></h2>
+    <p class="sub">Sem acoplamento, o agente precisa receber a conversa de novo em toda mensagem. O custo não cresce em linha reta: cresce em curva. Mexa no controle.</p>
+
+    <div class="sim">
+      <div>
+        <h3>Quanto você paga por conversar</h3>
+        <p>Compare o total de tokens processados numa conversa longa quando o histórico é reenviado a cada resposta e quando a memória já está acoplada.</p>
+        <div class="range">
+          <label><span>Mensagens na conversa</span><b id="nv">60</b></label>
+          <input type="range" id="n" min="5" max="400" value="60">
+        </div>
+        <div class="note mono">modelo simplificado · 150 tokens por mensagem · sem cache de prompt</div>
+      </div>
+      <div class="bars">
+        <div class="bar"><div class="top"><span>Reenviando o histórico</span><b id="ov">0</b></div><div class="track"><div class="fill old" id="of"></div></div></div>
+        <div class="bar"><div class="top"><span>Com Memairy acoplado</span><b id="nw">0</b></div><div class="track"><div class="fill new" id="nf"></div></div></div>
+        <div class="mult"><span id="mx">0×</span><small>menos tokens para o mesmo diálogo</small></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= COMO ================= -->
+<section id="como">
+  <div class="wrap reveal">
+    <div class="eyebrow mono">04 · como funciona</div>
+    <h2>Uma camada entre o seu ambiente e o seu agente. <em class="s">Só isso.</em></h2>
+    <p class="sub">O Memairy observa o que acontece e se atualiza em tempo real. O agente não pergunta o que lembra; ele já parte de lá.</p>
+
+    <div class="pipe">
+      <div class="node"><small class="mono">entrada</small><b>Seu ambiente</b><span>código, conversas, ferramentas, decisões</span></div>
+      <div class="wire"></div>
+      <div class="node mid"><small class="mono" style="color:var(--cyan)">memairy</small><b>Marca d'água</b><span>estado vivo, sempre atualizado</span></div>
+      <div class="wire b"></div>
+      <div class="node"><small class="mono">saída</small><b>Seu agente</b><span>Claude, GPT ou o que você já usa</span></div>
+    </div>
+
+    <div class="steps">
+      <div class="card step"><div class="num">PASSO 01</div><h3>Instale</h3><p>Um pacote, sem infraestrutura de memória para montar.</p>
+<pre><span class="c"># no seu projeto</span>
+<span class="k">npm</span> i memairy</pre></div>
+      <div class="card step"><div class="num">PASSO 02</div><h3>Acople</h3><p>Envolva o agente que você já tem. Nenhuma reescrita.</p>
+<pre><span class="k">import</span> { <span class="f">attach</span> } <span class="k">from</span> <span class="s">"memairy"</span>
+
+<span class="k">const</span> agent = <span class="f">attach</span>(myAgent)</pre></div>
+      <div class="card step"><div class="num">PASSO 03</div><h3>Converse</h3><p>É isso. A memória se forma e se mantém sozinha.</p>
+<pre><span class="c">// nenhum histórico para montar</span>
+<span class="k">await</span> agent.<span class="f">run</span>(<span class="s">"continua de onde paramos"</span>)</pre></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section id="faq">
+  <div class="wrap reveal">
+    <div class="faq">
+      <div>
+        <div class="eyebrow mono">05 · perguntas</div>
+        <h2 style="font-size:clamp(1.9rem,3.4vw,2.6rem)">O que você provavelmente <em class="s">vai perguntar.</em></h2>
+      </div>
+      <div>
+        <details open><summary>Isso é só um RAG com outro nome?</summary><p>Não. RAG é uma etapa de busca: o agente recebe uma pergunta, procura trechos e os cola no prompt. No Memairy não há busca no meio do caminho, porque o contexto do ambiente já está acoplado ao agente.</p></details>
+        <details><summary>Funciona com qualquer modelo?</summary><p>A proposta é ser agnóstico. O Memairy fica entre o ambiente e o agente, e por isso você pode acoplá-lo a Claude, GPT ou ao agente que já construiu.</p></details>
+        <details><summary>E quando algo deixa de ser verdade?</summary><p>Como a marca d'água acompanha o ambiente em tempo real, ela muda junto com ele. O que ficou obsoleto perde peso por conta própria, sem você escrever regras de expiração.</p></details>
+        <details><summary>Preciso reescrever o meu agente?</summary><p>Não. O acoplamento envolve o agente existente. Instalar e acoplar são dois passos; o resto é o dia a dia de sempre.</p></details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FINAL ================= -->
+<section id="comecar" style="padding-top:40px">
+  <div class="wrap reveal">
+    <div class="final">
+      <div class="eyebrow mono" style="justify-content:center">comece agora</div>
+      <h2>Pare de lembrar o agente. <em class="s">Deixe ele lembrar.</em></h2>
+      <p>Instale, acople e converse. A memória passa a ser parte do agente, e não mais uma tarefa sua.</p>
+      <div class="install mono"><code><span>$</span> npm i memairy</code><button>copiar</button></div><br>
+      <a href="#" class="btn">Instalar o Memairy <span>→</span></a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap"><span>© 2026 Memairy</span><span class="mono">memória é estado, não arquivo.</span></div>
+</footer>
+
+<script>
+// copy buttons
+document.querySelectorAll('.install button').forEach(b=>b.addEventListener('click',()=>{
+  const t=b.parentElement.querySelector('code').textContent.replace(/^\$\s*/,'');
+  try{navigator.clipboard.writeText(t)}catch(e){}
+  b.textContent='copiado';setTimeout(()=>b.textContent='copiar',1500);
+}));
+
+// reveal on scroll
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.08});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+// card spotlight
+document.querySelectorAll('.card').forEach(c=>c.addEventListener('pointermove',e=>{
+  const r=c.getBoundingClientRect();c.style.setProperty('--mx',(e.clientX-r.left)+'px');c.style.setProperty('--my',(e.clientY-r.top)+'px');
+}));
+
+// cost simulator: re-sending history = sum(i*T); coupled = n*T
+(()=>{
+  const T=150,$=id=>document.getElementById(id),r=$('n');
+  const fmt=v=>v>=1e6?(v/1e6).toFixed(2).replace('.',',')+' M':v>=1e3?(v/1e3).toFixed(1).replace('.',',')+' mil':String(v);
+  function up(){
+    const n=+r.value,old=T*n*(n+1)/2,nw=T*n;
+    $('nv').textContent=n;
+    $('ov').textContent=fmt(old)+' tokens';$('nw').textContent=fmt(nw)+' tokens';
+    $('of').style.width='100%';$('nf').style.width=Math.max(.8,nw/old*100)+'%';
+    $('mx').textContent=(old/nw).toFixed(old/nw<10?1:0).replace('.',',')+'×';
+    r.style.setProperty('--p',((n-r.min)/(r.max-r.min)*100)+'%');
+  }
+  r.addEventListener('input',up);up();
+})();
+
+// living flow field: a grid of strokes that ignite under the cursor and fade like a wake
+(()=>{
+  const c=document.getElementById('field'),x=c.getContext('2d');
+  const still=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const S=30;let w,h,cols,rows,heat,t=0;
+  const m={x:-999,y:-999,px:-999,py:-999,on:false};
+  function size(){
+    const d=Math.min(devicePixelRatio||1,2);w=innerWidth;h=innerHeight;
+    c.width=w*d;c.height=h*d;x.setTransform(d,0,0,d,0,0);
+    cols=Math.ceil(w/S)+1;rows=Math.ceil(h/S)+1;heat=new Float32Array(cols*rows);
+  }
+  function poke(px,py,r,k){
+    const c0=Math.max(0,Math.floor((px-r)/S)),c1=Math.min(cols-1,Math.ceil((px+r)/S));
+    const r0=Math.max(0,Math.floor((py-r)/S)),r1=Math.min(rows-1,Math.ceil((py+r)/S));
+    for(let j=r0;j<=r1;j++)for(let i=c0;i<=c1;i++){
+      const d=Math.hypot(i*S-px,j*S-py);if(d<r){const v=(1-d/r);heat[j*cols+i]=Math.min(1,heat[j*cols+i]+v*v*k)}
+    }
+  }
+  addEventListener('pointermove',e=>{
+    m.on=true;m.px=m.x<0?e.clientX:m.x;m.py=m.y<0?e.clientY:m.y;m.x=e.clientX;m.y=e.clientY;
+    const dist=Math.hypot(m.x-m.px,m.y-m.py),n=Math.max(1,Math.ceil(dist/20));
+    for(let k=1;k<=n;k++)poke(m.px+(m.x-m.px)*k/n,m.py+(m.y-m.py)*k/n,105,.2);
+  });
+  addEventListener('pointerleave',()=>{m.on=false});
+  addEventListener('resize',size);size();
+  // wandering ambient light so the page breathes even without a pointer
+  const sparks=[0,1,2].map(i=>({a:i*2.1,r:.25+i*.1}));
+  function field(i,j){return Math.sin(i*.19+t*.5)+Math.cos(j*.23-t*.4)+Math.sin((i+j)*.11+t*.3)}
+  function frame(){
+    t+=.012;x.clearRect(0,0,w,h);
+    if(!still){for(const s of sparks){s.a+=.004;poke(w/2+Math.cos(s.a*s.r*3+s.a)*w*.38,h/2+Math.sin(s.a*1.3)*h*.34,170,.006)}}
+    // diffuse heat a little so light bleeds outward like it is flowing
+    const nh=new Float32Array(heat.length);
+    for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){
+      const k=j*cols+i;let v=heat[k]*.8,n=0,sm=0;
+      if(i>0){sm+=heat[k-1];n++}if(i<cols-1){sm+=heat[k+1];n++}if(j>0){sm+=heat[k-cols];n++}if(j<rows-1){sm+=heat[k+cols];n++}
+      nh[k]=(v+sm/n*.2)*.972;
+    }
+    heat=nh;
+    x.lineCap='round';
+    for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){
+      const hv=Math.min(1,heat[j*cols+i]),a=field(i,j)*1.05+hv*1.4;
+      const len=5+hv*8,cx=i*S,cy=j*S,dx=Math.cos(a)*len/2,dy=Math.sin(a)*len/2;
+      const al=.09+hv*.75;
+      x.strokeStyle=hv>.04?`rgba(${110+hv*90|0},${160+hv*70|0},255,${al})`:`rgba(110,140,200,${al})`;
+      x.lineWidth=1+hv*1.1;
+      x.beginPath();x.moveTo(cx-dx,cy-dy);x.lineTo(cx+dx,cy+dy);x.stroke();
+    }
+    if(!still)requestAnimationFrame(frame);
+  }
+  frame();
+})();
+</script>
+</body>
+</html>
